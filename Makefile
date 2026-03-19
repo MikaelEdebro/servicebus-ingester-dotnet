@@ -26,7 +26,7 @@ migrate-down:
 	dbmate -d db/migrations --url "$(DATABASE_URL)" down
 
 ACR := acrvcedcsp.azurecr.io
-IMAGE := $(ACR)/experiment/ingestion/dotnet-ingester
+IMAGE := $(ACR)/experiment/ingestion/servicebus-ingester-dotnet
 TAG := $(shell date +%Y%m%d.%H%M%S)
 
 docker-build:

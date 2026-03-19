@@ -1,14 +1,14 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: dotnet-ingester-config
+  name: servicebus-ingester-dotnet-config
   namespace: experiment
 data:
   CONSUMER_COUNT: "20"
   BATCH_SIZE: "100"
   HEALTH_PORT: "8080"
   SERVICEBUS_TOPIC: "sb-loadtest-listen"
-  SERVICEBUS_SUBSCRIPTION: "dotnet-ingester"
+  SERVICEBUS_SUBSCRIPTION: "servicebus-ingester-dotnet"
   DB_USER: "ingestionservicebusingesterdotnet"
   DB_PORT: "5432"
   DB_DATABASE: "vce_experiment_ingestion_servicebusingesterdotnet"

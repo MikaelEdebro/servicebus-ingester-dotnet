@@ -1,10 +1,10 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: dotnet-ingester
+  name: servicebus-ingester-dotnet
   namespace: experiment
   labels:
-    app: dotnet-ingester
+    app: servicebus-ingester-dotnet
 spec:
   strategy:
     type: RollingUpdate
@@ -14,12 +14,12 @@ spec:
   replicas: 2
   selector:
     matchLabels:
-      app: dotnet-ingester
+      app: servicebus-ingester-dotnet
   template:
     metadata:
       labels:
-        app: dotnet-ingester
-        app.kubernetes.io/name: dotnet-ingester
+        app: servicebus-ingester-dotnet
+        app.kubernetes.io/name: servicebus-ingester-dotnet
         app.kubernetes.io/component: server
         log-source: dcsp-backend
         team: platform
@@ -34,15 +34,15 @@ spec:
           effect: "NoSchedule"
       containers:
         - name: ingester
-          image: acrvcedcsp.azurecr.io/experiment/ingestion/dotnet-ingester:20260319.112646
+          image: acrvcedcsp.azurecr.io/experiment/ingestion/servicebus-ingester-dotnet:20260319.112646
           imagePullPolicy: Always
           envFrom:
             - configMapRef:
                 name: global-env-config
             - configMapRef:
-                name: dotnet-ingester-config
+                name: servicebus-ingester-dotnet-config
             - secretRef:
-                name: dotnet-ingester-kv-experiment-config
+                name: servicebus-ingester-dotnet-kv-experiment-config
           ports:
             - name: health
               containerPort: 8080
