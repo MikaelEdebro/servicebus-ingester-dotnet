@@ -37,6 +37,9 @@ public sealed class MessageHandler(
         activity?.SetTag("cloudevents.source", cloudEvent.Source);
         activity?.SetTag("cloudevents.id", cloudEvent.Id);
 
+        logger.LogInformation("Received message {MessageId} type={Type} source={Source}",
+            message.MessageId, cloudEvent.Type, cloudEvent.Source);
+
         var rawBody = message.Body.ToString();
 
         await repository.InsertMessageAsync(message.MessageId, cloudEvent.Type, cloudEvent.Source, rawBody, ct);
