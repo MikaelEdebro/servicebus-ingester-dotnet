@@ -16,13 +16,6 @@ SET row_security = off;
 CREATE SCHEMA ingestionservicebusingesterdotnet;
 
 
---
--- Name: public; Type: SCHEMA; Schema: -; Owner: -
---
-
--- *not* creating schema, since initdb creates it
-
-
 SET default_tablespace = '';
 
 SET default_table_access_method = heap;
