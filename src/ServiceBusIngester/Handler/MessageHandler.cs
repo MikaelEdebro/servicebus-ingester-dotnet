@@ -24,6 +24,9 @@ public sealed class MessageHandler(
         activity?.SetTag("cloudevents.source", cloudEvent.Source);
         activity?.SetTag("cloudevents.id", cloudEvent.Id);
 
+        logger.LogInformation("Received message {MessageId} type={Type} source={Source} strategy=single",
+            message.MessageId, cloudEvent.Type, cloudEvent.Source);
+
         await repository.InsertAsync(message.MessageId, cloudEvent.Type, cloudEvent.Source, message.Body.ToString(), ct);
 
         if (sender is not null)
@@ -47,6 +50,9 @@ public sealed class MessageHandler(
             try
             {
                 var cloudEvent = Deserialize(msg);
+
+                logger.LogInformation("Received message {MessageId} type={Type} source={Source} strategy=batch",
+                    msg.MessageId, cloudEvent.Type, cloudEvent.Source);
                 var row = new MessageRow(msg.MessageId, cloudEvent.Type, cloudEvent.Source, msg.Body.ToString());
                 var evt = sender is not null
                     ? new OutboundEvent(cloudEvent.Type, cloudEvent.Source, cloudEvent.Data)

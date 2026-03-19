@@ -11,6 +11,9 @@ var options = IngesterOptions.FromEnvironment();
 var builder = WebApplication.CreateSlimBuilder(args);
 builder.WebHost.UseUrls($"http://+:{options.HealthPort}");
 
+builder.Logging.AddJsonConsole();
+builder.Logging.AddFilter("Microsoft.AspNetCore", LogLevel.Warning);
+
 builder.Services.AddSingleton(options);
 
 var dataSource = NpgsqlDataSource.Create(options.ConnectionString);
