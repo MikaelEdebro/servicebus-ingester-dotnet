@@ -13,8 +13,9 @@ public sealed class MessageConsumer(
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         logger.LogInformation(
-            "Starting {ConsumerCount} receivers (batch size {BatchSize}, prefetch {PrefetchCount}) on {Topic}/{Subscription}",
-            options.ConsumerCount, options.BatchSize, options.PrefetchCount, options.ServiceBusTopic, options.ServiceBusSubscription);
+            "Starting {ConsumerCount} receivers (batch size {BatchSize}, prefetch {PrefetchCount}, strategy {Strategy}) on {Topic}/{Subscription}",
+            options.ConsumerCount, options.BatchSize, options.PrefetchCount, options.Strategy,
+            options.ServiceBusTopic, options.ServiceBusSubscription);
 
         var tasks = new Task[options.ConsumerCount];
         for (var i = 0; i < options.ConsumerCount; i++)
@@ -54,23 +55,13 @@ public sealed class MessageConsumer(
                     continue;
                 }
 
-                foreach (var msg in messages)
+                if (options.Strategy == ProcessingStrategy.Batch)
                 {
-                    try
-                    {
-                        await handler.HandleAsync(msg, ct);
-                        await receiver.CompleteMessageAsync(msg, ct);
-                    }
-                    catch (OperationCanceledException) when (ct.IsCancellationRequested)
-                    {
-                        break;
-                    }
-                    catch (Exception ex)
-                    {
-                        logger.LogError(ex,
-                            "Receiver {Index}: error handling message {MessageId}, letting lock expire",
-                            index, msg.MessageId);
-                    }
+                    await ProcessBatch(receiver, messages, index, ct);
+                }
+                else
+                {
+                    await ProcessSingle(receiver, messages, index, ct);
                 }
             }
         }
@@ -78,6 +69,46 @@ public sealed class MessageConsumer(
         {
             await receiver.DisposeAsync();
             logger.LogInformation("Receiver {Index} stopped", index);
+        }
+    }
+
+    private async Task ProcessBatch(ServiceBusReceiver receiver, IReadOnlyList<ServiceBusReceivedMessage> messages, int index, CancellationToken ct)
+    {
+        try
+        {
+            await handler.HandleBatchAsync(receiver, messages, ct);
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex,
+                "Receiver {Index}: error handling batch of {Count} messages, letting locks expire",
+                index, messages.Count);
+        }
+    }
+
+    private async Task ProcessSingle(ServiceBusReceiver receiver, IReadOnlyList<ServiceBusReceivedMessage> messages, int index, CancellationToken ct)
+    {
+        foreach (var msg in messages)
+        {
+            try
+            {
+                await handler.HandleSingleAsync(msg, ct);
+                await receiver.CompleteMessageAsync(msg, ct);
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                break;
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex,
+                    "Receiver {Index}: error handling message {MessageId}, letting lock expire",
+                    index, msg.MessageId);
+            }
         }
     }
 }

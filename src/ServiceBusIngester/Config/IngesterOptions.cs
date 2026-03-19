@@ -1,5 +1,7 @@
 namespace ServiceBusIngester.Config;
 
+public enum ProcessingStrategy { Single, Batch }
+
 public sealed class IngesterOptions
 {
     // Service Bus
@@ -14,6 +16,7 @@ public sealed class IngesterOptions
     public int ConsumerCount { get; set; } = 10;
     public int BatchSize { get; set; } = 20;
     public int PrefetchCount { get; set; }
+    public ProcessingStrategy Strategy { get; set; } = ProcessingStrategy.Single;
 
     // Database
     public string DbHost { get; set; } = "";
@@ -74,6 +77,8 @@ public sealed class IngesterOptions
             ConsumerCount = EnvInt("CONSUMER_COUNT", 10),
             BatchSize = EnvInt("BATCH_SIZE", 20),
             PrefetchCount = EnvInt("SB_PREFETCH_COUNT", 0),
+            Strategy = Enum.TryParse<ProcessingStrategy>(Env("SB_STRATEGY", "batch"), ignoreCase: true, out var strategy)
+                ? strategy : ProcessingStrategy.Single,
             DbHost = Env("DB_HOST"),
             DbUser = Env("DB_USER"),
             DbPassword = Env("DB_PASSWORD"),
