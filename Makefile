@@ -17,7 +17,7 @@ clean:
 restore:
 	dotnet restore $(PROJECT)
 
-DATABASE_URL := postgres://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_DATABASE)?sslmode=$(DB_SSL_MODE)
+DATABASE_URL := postgres://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_DATABASE)?sslmode=$(DB_SSL_MODE)$(if $(DB_SCHEMA),&search_path=$(DB_SCHEMA),)
 
 migrate:
 	dbmate -d db/migrations --url "$(DATABASE_URL)" up

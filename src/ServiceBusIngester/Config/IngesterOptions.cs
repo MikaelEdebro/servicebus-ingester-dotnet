@@ -13,6 +13,7 @@ public sealed class IngesterOptions
     // Consumer
     public int ConsumerCount { get; set; } = 10;
     public int BatchSize { get; set; } = 20;
+    public int PrefetchCount { get; set; }
 
     // Database
     public string DbHost { get; set; } = "";
@@ -72,6 +73,7 @@ public sealed class IngesterOptions
             ServiceBusSendQueue = Env("SERVICEBUS_SEND_QUEUE") is { Length: > 0 } sq ? sq : null,
             ConsumerCount = EnvInt("CONSUMER_COUNT", 10),
             BatchSize = EnvInt("BATCH_SIZE", 20),
+            PrefetchCount = EnvInt("SB_PREFETCH_COUNT", 0),
             DbHost = Env("DB_HOST"),
             DbUser = Env("DB_USER"),
             DbPassword = Env("DB_PASSWORD"),

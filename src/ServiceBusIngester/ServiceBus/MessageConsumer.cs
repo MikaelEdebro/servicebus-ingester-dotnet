@@ -13,8 +13,8 @@ public sealed class MessageConsumer(
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         logger.LogInformation(
-            "Starting {ConsumerCount} receivers (batch size {BatchSize}) on {Topic}/{Subscription}",
-            options.ConsumerCount, options.BatchSize, options.ServiceBusTopic, options.ServiceBusSubscription);
+            "Starting {ConsumerCount} receivers (batch size {BatchSize}, prefetch {PrefetchCount}) on {Topic}/{Subscription}",
+            options.ConsumerCount, options.BatchSize, options.PrefetchCount, options.ServiceBusTopic, options.ServiceBusSubscription);
 
         var tasks = new Task[options.ConsumerCount];
         for (var i = 0; i < options.ConsumerCount; i++)
@@ -28,7 +28,11 @@ public sealed class MessageConsumer(
 
     private async Task ReceiveLoop(int index, CancellationToken ct)
     {
-        var receiver = client.CreateReceiver(options.ServiceBusTopic, options.ServiceBusSubscription);
+        var receiverOptions = new ServiceBusReceiverOptions
+        {
+            PrefetchCount = options.PrefetchCount
+        };
+        var receiver = client.CreateReceiver(options.ServiceBusTopic, options.ServiceBusSubscription, receiverOptions);
         logger.LogInformation("Receiver {Index} started", index);
 
         try
