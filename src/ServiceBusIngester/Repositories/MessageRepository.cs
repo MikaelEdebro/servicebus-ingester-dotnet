@@ -2,7 +2,7 @@ using System.Diagnostics;
 using Npgsql;
 using NpgsqlTypes;
 
-namespace ServiceBusIngester.Database;
+namespace ServiceBusIngester.Repositories;
 
 public sealed class MessageRepository(NpgsqlDataSource dataSource)
 {
@@ -27,7 +27,7 @@ public sealed class MessageRepository(NpgsqlDataSource dataSource)
     public async Task InsertBatchAsync(NpgsqlConnection conn, NpgsqlTransaction tx, IReadOnlyList<MessageRow> rows, CancellationToken ct)
     {
         using var activity = Tracer.StartActivity("db.InsertBatch");
-        activity?.SetTag("db.batch_size", rows.Count);
+        activity?.SetTag("db.SB_BATCH_SIZE", rows.Count);
 
         await using var writer = await conn.BeginBinaryImportAsync(
             "COPY messages (message_id, event_type, source, body) FROM STDIN (FORMAT BINARY)", ct);

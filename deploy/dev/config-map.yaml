@@ -4,19 +4,25 @@ metadata:
   name: servicebus-ingester-dotnet-config
   namespace: experiment
 data:
-  CONSUMER_COUNT: "20"
-  BATCH_SIZE: "100"
   HEALTH_PORT: "8080"
-  SERVICEBUS_TOPIC: "sb-loadtest-listen"
-  SERVICEBUS_SUBSCRIPTION: "dotnet-ingester"
+
   DB_USER: "ingestionservicebusingesterdotnet"
   DB_PORT: "5432"
   DB_DATABASE: "vce_experiment_ingestion_servicebusingesterdotnet"
   DB_SCHEMA: "ingestionservicebusingesterdotnet"
-  DB_SSL_MODE: "require"
   DB_MAX_CONNS: "20"
   DB_CONNECTION_IDLE_TIME_MINUTES: "5"
   DB_CONNECTION_LIFE_TIME_MINUTES: "30"
+
+  SB_CONSUMER_COUNT: "20"
   SB_PREFETCH_COUNT: "0"
-  SB_STRATEGY: "batch"
-  SERVICEBUS_SEND_TOPIC: "sb-loadtest-send"
+  SB_BATCH_SIZE: "100"
+  SB_SEND_TOPIC: "sb-loadtest-send"
+
+  SB_MACHINE_LOCATION_TOPIC: "sb-loadtest-listen"
+  SB_MACHINE_LOCATION_SUBSCRIPTION: "dotnet-ingester"
+  SB_MACHINE_LOCATION_STRATEGY: "single"
+
+  SB_USER_UPDATED_TOPIC: "sb-loadtest-listen"
+  SB_USER_UPDATED_SUBSCRIPTION: "dotnet-ingester-user"
+  SB_USER_UPDATED_STRATEGY: "single"

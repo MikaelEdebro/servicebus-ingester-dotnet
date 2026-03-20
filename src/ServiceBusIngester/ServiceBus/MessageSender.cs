@@ -31,7 +31,7 @@ public sealed class MessageSender(ServiceBusSender sender) : IAsyncDisposable
     public async Task SendBatchAsync(IReadOnlyList<OutboundEvent> events, CancellationToken ct)
     {
         using var activity = Tracer.StartActivity("servicebus.SendBatch");
-        activity?.SetTag("messaging.batch_size", events.Count);
+        activity?.SetTag("messaging.SB_BATCH_SIZE", events.Count);
 
         using var batch = await sender.CreateMessageBatchAsync(ct);
 

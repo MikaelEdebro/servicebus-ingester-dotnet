@@ -7,8 +7,6 @@ public sealed class IngesterOptions
     // Service Bus
     public string? ServiceBusConnectionString { get; set; }
     public string? ServiceBusNamespace { get; set; }
-    public string ServiceBusTopic { get; set; } = "";
-    public string ServiceBusSubscription { get; set; } = "";
     public string? ServiceBusSendTopic { get; set; }
     public string? ServiceBusSendQueue { get; set; }
 
@@ -16,7 +14,6 @@ public sealed class IngesterOptions
     public int ConsumerCount { get; set; } = 10;
     public int BatchSize { get; set; } = 20;
     public int PrefetchCount { get; set; }
-    public ProcessingStrategy Strategy { get; set; } = ProcessingStrategy.Single;
 
     // Database
     public string DbHost { get; set; } = "";
@@ -39,7 +36,7 @@ public sealed class IngesterOptions
 
     public string ConnectionString =>
         $"Host={DbHost};Port={DbPort};Database={DbDatabase};Username={DbUser};Password={DbPassword}" +
-        $";SSL Mode={MapSslMode(DbSslMode)};Maximum Pool Size={DbMaxConns}" +
+        $";SSL Mode={DbSslMode};Maximum Pool Size={DbMaxConns}" +
         $";Connection Idle Lifetime={DbConnectionIdleTimeMinutes * 60}" +
         $";Connection Lifetime={DbConnectionLifeTimeMinutes * 60}" +
         (DbSchema is not null ? $";Search Path={DbSchema}" : "") +
@@ -70,22 +67,18 @@ public sealed class IngesterOptions
         {
             ServiceBusConnectionString = Env("SERVICEBUS_CONNECTION_STRING") is { Length: > 0 } s ? s : null,
             ServiceBusNamespace = Env("SERVICEBUS_NAMESPACE") is { Length: > 0 } ns ? ns : null,
-            ServiceBusTopic = Env("SERVICEBUS_TOPIC"),
-            ServiceBusSubscription = Env("SERVICEBUS_SUBSCRIPTION"),
-            ServiceBusSendTopic = Env("SERVICEBUS_SEND_TOPIC") is { Length: > 0 } st ? st : null,
-            ServiceBusSendQueue = Env("SERVICEBUS_SEND_QUEUE") is { Length: > 0 } sq ? sq : null,
-            ConsumerCount = EnvInt("CONSUMER_COUNT", 10),
-            BatchSize = EnvInt("BATCH_SIZE", 20),
+            ServiceBusSendTopic = Env("SB_SEND_TOPIC") is { Length: > 0 } st ? st : null,
+            ServiceBusSendQueue = Env("SB_SEND_QUEUE") is { Length: > 0 } sq ? sq : null,
+            ConsumerCount = EnvInt("SB_CONSUMER_COUNT", 10),
+            BatchSize = EnvInt("SB_BATCH_SIZE", 20),
             PrefetchCount = EnvInt("SB_PREFETCH_COUNT", 0),
-            Strategy = Enum.TryParse<ProcessingStrategy>(Env("SB_STRATEGY", "batch"), ignoreCase: true, out var strategy)
-                ? strategy : ProcessingStrategy.Single,
             DbHost = Env("DB_HOST"),
             DbUser = Env("DB_USER"),
             DbPassword = Env("DB_PASSWORD"),
             DbPort = EnvInt("DB_PORT", 5432),
             DbDatabase = Env("DB_DATABASE"),
             DbSchema = Env("DB_SCHEMA") is { Length: > 0 } schema ? schema : null,
-            DbSslMode = Env("DB_SSL_MODE", "require"),
+            DbSslMode = Env("DB_SSL_MODE", "Require"),
             DbSimpleProtocol = EnvBool("DB_SIMPLE_PROTOCOL"),
             DbMaxConns = EnvInt("DB_MAX_CONNS", 50),
             DbConnectionIdleTimeMinutes = EnvInt("DB_CONNECTION_IDLE_TIME_MINUTES", 5),

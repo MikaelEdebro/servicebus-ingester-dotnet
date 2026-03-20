@@ -1,40 +1,51 @@
 using Azure.Messaging.ServiceBus;
 using ServiceBusIngester.Config;
-using ServiceBusIngester.Handler;
+using ServiceBusIngester.Handlers;
 
 namespace ServiceBusIngester.ServiceBus;
 
 public sealed class MessageConsumer(
     ServiceBusClient client,
     IngesterOptions options,
-    MessageHandler handler,
+    EventHandlerDispatcher dispatcher,
     ILogger<MessageConsumer> logger) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        logger.LogInformation(
-            "Starting {ConsumerCount} receivers (batch size {BatchSize}, prefetch {PrefetchCount}, strategy {Strategy}) on {Topic}/{Subscription}",
-            options.ConsumerCount, options.BatchSize, options.PrefetchCount, options.Strategy,
-            options.ServiceBusTopic, options.ServiceBusSubscription);
+        var groups = dispatcher.Handlers
+            .GroupBy(h => (h.Topic, h.Subscription))
+            .ToList();
 
-        var tasks = new Task[options.ConsumerCount];
-        for (var i = 0; i < options.ConsumerCount; i++)
+        var tasks = new List<Task>();
+
+        foreach (var group in groups)
         {
-            var receiverIndex = i;
-            tasks[i] = Task.Run(() => ReceiveLoop(receiverIndex, stoppingToken), stoppingToken);
+            var (topic, subscription) = group.Key;
+            var strategy = group.First().Strategy;
+
+            logger.LogInformation(
+                "Starting {ConsumerCount} receivers (batch size {BatchSize}, prefetch {PrefetchCount}, strategy {Strategy}) on {Topic}/{Subscription}",
+                options.ConsumerCount, options.BatchSize, options.PrefetchCount, strategy, topic, subscription);
+
+            for (var i = 0; i < options.ConsumerCount; i++)
+            {
+                var receiverIndex = i;
+                tasks.Add(Task.Run(
+                    () => ReceiveLoop(receiverIndex, topic, subscription, strategy, stoppingToken),
+                    stoppingToken));
+            }
         }
 
         await Task.WhenAll(tasks);
     }
 
-    private async Task ReceiveLoop(int index, CancellationToken ct)
+    private async Task ReceiveLoop(
+        int index, string topic, string subscription, ProcessingStrategy strategy, CancellationToken ct)
     {
-        var receiverOptions = new ServiceBusReceiverOptions
-        {
-            PrefetchCount = options.PrefetchCount
-        };
-        var receiver = client.CreateReceiver(options.ServiceBusTopic, options.ServiceBusSubscription, receiverOptions);
-        logger.LogInformation("Receiver {Index} started", index);
+        var receiverOptions = new ServiceBusReceiverOptions { PrefetchCount = options.PrefetchCount };
+        var receiver = client.CreateReceiver(topic, subscription, receiverOptions);
+
+        logger.LogInformation("Receiver {Index} started on {Topic}/{Subscription}", index, topic, subscription);
 
         try
         {
@@ -51,64 +62,31 @@ public sealed class MessageConsumer(
                 }
                 catch (Exception ex)
                 {
-                    logger.LogError(ex, "Receiver {Index}: error receiving messages", index);
+                    logger.LogError(ex, "Receiver {Index} on {Topic}/{Subscription}: error receiving messages",
+                        index, topic, subscription);
                     continue;
                 }
 
-                if (options.Strategy == ProcessingStrategy.Batch)
+                try
                 {
-                    await ProcessBatch(receiver, messages, index, ct);
+                    await dispatcher.DispatchAsync(receiver, messages, strategy, ct);
                 }
-                else
+                catch (OperationCanceledException) when (ct.IsCancellationRequested)
                 {
-                    await ProcessSingle(receiver, messages, index, ct);
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex,
+                        "Receiver {Index} on {Topic}/{Subscription}: error dispatching {Count} messages, letting locks expire",
+                        index, topic, subscription, messages.Count);
                 }
             }
         }
         finally
         {
             await receiver.DisposeAsync();
-            logger.LogInformation("Receiver {Index} stopped", index);
-        }
-    }
-
-    private async Task ProcessBatch(ServiceBusReceiver receiver, IReadOnlyList<ServiceBusReceivedMessage> messages, int index, CancellationToken ct)
-    {
-        try
-        {
-            await handler.HandleBatchAsync(receiver, messages, ct);
-        }
-        catch (OperationCanceledException) when (ct.IsCancellationRequested)
-        {
-            return;
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex,
-                "Receiver {Index}: error handling batch of {Count} messages, letting locks expire",
-                index, messages.Count);
-        }
-    }
-
-    private async Task ProcessSingle(ServiceBusReceiver receiver, IReadOnlyList<ServiceBusReceivedMessage> messages, int index, CancellationToken ct)
-    {
-        foreach (var msg in messages)
-        {
-            try
-            {
-                await handler.HandleSingleAsync(msg, ct);
-                await receiver.CompleteMessageAsync(msg, ct);
-            }
-            catch (OperationCanceledException) when (ct.IsCancellationRequested)
-            {
-                break;
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex,
-                    "Receiver {Index}: error handling message {MessageId}, letting lock expire",
-                    index, msg.MessageId);
-            }
+            logger.LogInformation("Receiver {Index} on {Topic}/{Subscription} stopped", index, topic, subscription);
         }
     }
 }

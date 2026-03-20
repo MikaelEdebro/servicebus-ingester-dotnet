@@ -2,8 +2,10 @@ using Npgsql;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using ServiceBusIngester.Config;
-using ServiceBusIngester.Database;
-using ServiceBusIngester.Handler;
+using ServiceBusIngester.Repositories;
+using ServiceBusIngester.Handlers;
+using ServiceBusIngester.Handlers.MachineLocationEvent;
+using ServiceBusIngester.Handlers.UserUpdatedEvent;
 using ServiceBusIngester.ServiceBus;
 
 var options = IngesterOptions.FromEnvironment();
@@ -33,7 +35,9 @@ else
     builder.Services.AddSingleton<MessageSender>(sp => null!);
 }
 
-builder.Services.AddSingleton<MessageHandler>();
+builder.Services.AddSingleton<IEventHandler, MachineLocationEventHandler>();
+builder.Services.AddSingleton<IEventHandler, UserUpdatedEventHandler>();
+builder.Services.AddSingleton<EventHandlerDispatcher>();
 builder.Services.AddHostedService<MessageConsumer>();
 
 builder.Services.AddHealthChecks()
