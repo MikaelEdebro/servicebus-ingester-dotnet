@@ -6,6 +6,7 @@ metadata:
 data:
   HEALTH_PORT: "8080"
 
+  # db config
   DB_USER: "ingestionservicebusingesterdotnet"
   DB_PORT: "5432"
   DB_DATABASE: "vce_experiment_ingestion_servicebusingesterdotnet"
@@ -14,15 +15,17 @@ data:
   DB_CONNECTION_IDLE_TIME_MINUTES: "5"
   DB_CONNECTION_LIFE_TIME_MINUTES: "30"
 
+  # servicebus general config
   SB_CONSUMER_COUNT: "20"
   SB_PREFETCH_COUNT: "0"
   SB_BATCH_SIZE: "100"
   SB_SEND_TOPIC: "sb-loadtest-send"
 
+  # servicebus per topic config
   SB_MACHINE_LOCATION_TOPIC: "sb-loadtest-listen"
   SB_MACHINE_LOCATION_SUBSCRIPTION: "dotnet-ingester"
-  SB_MACHINE_LOCATION_STRATEGY: "single"
+  SB_MACHINE_LOCATION_STRATEGY: "batch"
 
   SB_USER_UPDATED_TOPIC: "sb-loadtest-listen"
   SB_USER_UPDATED_SUBSCRIPTION: "dotnet-ingester-user"
-  SB_USER_UPDATED_STRATEGY: "single"
+  SB_USER_UPDATED_STRATEGY: "batch"
