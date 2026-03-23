@@ -36,7 +36,7 @@ spec:
           effect: "NoSchedule"
       containers:
         - name: ingester
-          image: acrvcedcsp.azurecr.io/experiment/ingestion/servicebus-ingester-dotnet:20260320.115759
+          image: acrvcedcsp.azurecr.io/experiment/ingestion/servicebus-ingester-dotnet:20260323.093406
           imagePullPolicy: Always
           envFrom:
             - configMapRef:
