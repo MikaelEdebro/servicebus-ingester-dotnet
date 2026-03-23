@@ -58,6 +58,34 @@ CREATE TABLE ingestionservicebusingesterdotnet.schema_migrations (
 
 
 --
+-- Name: user_audit_logs; Type: TABLE; Schema: ingestionservicebusingesterdotnet; Owner: -
+--
+
+CREATE TABLE ingestionservicebusingesterdotnet.user_audit_logs (
+    id bigint NOT NULL,
+    user_id text NOT NULL,
+    event_type text NOT NULL,
+    source text NOT NULL,
+    payload jsonb NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
+-- Name: user_audit_logs_id_seq; Type: SEQUENCE; Schema: ingestionservicebusingesterdotnet; Owner: -
+--
+
+ALTER TABLE ingestionservicebusingesterdotnet.user_audit_logs ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME ingestionservicebusingesterdotnet.user_audit_logs_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
 -- Name: messages messages_pkey; Type: CONSTRAINT; Schema: ingestionservicebusingesterdotnet; Owner: -
 --
 
@@ -71,6 +99,14 @@ ALTER TABLE ONLY ingestionservicebusingesterdotnet.messages
 
 ALTER TABLE ONLY ingestionservicebusingesterdotnet.schema_migrations
     ADD CONSTRAINT schema_migrations_pkey PRIMARY KEY (version);
+
+
+--
+-- Name: user_audit_logs user_audit_logs_pkey; Type: CONSTRAINT; Schema: ingestionservicebusingesterdotnet; Owner: -
+--
+
+ALTER TABLE ONLY ingestionservicebusingesterdotnet.user_audit_logs
+    ADD CONSTRAINT user_audit_logs_pkey PRIMARY KEY (id);
 
 
 --
@@ -88,6 +124,20 @@ CREATE INDEX idx_messages_event_type ON ingestionservicebusingesterdotnet.messag
 
 
 --
+-- Name: idx_user_audit_logs_created_at; Type: INDEX; Schema: ingestionservicebusingesterdotnet; Owner: -
+--
+
+CREATE INDEX idx_user_audit_logs_created_at ON ingestionservicebusingesterdotnet.user_audit_logs USING btree (created_at);
+
+
+--
+-- Name: idx_user_audit_logs_user_id; Type: INDEX; Schema: ingestionservicebusingesterdotnet; Owner: -
+--
+
+CREATE INDEX idx_user_audit_logs_user_id ON ingestionservicebusingesterdotnet.user_audit_logs USING btree (user_id);
+
+
+--
 -- PostgreSQL database dump complete
 --
 
@@ -97,4 +147,5 @@ CREATE INDEX idx_messages_event_type ON ingestionservicebusingesterdotnet.messag
 --
 
 INSERT INTO ingestionservicebusingesterdotnet.schema_migrations (version) VALUES
-    ('001');
+    ('001'),
+    ('002');

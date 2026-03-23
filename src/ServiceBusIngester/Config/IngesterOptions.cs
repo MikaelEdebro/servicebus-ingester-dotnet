@@ -4,16 +4,8 @@ public enum ProcessingStrategy { Single, Batch }
 
 public sealed class IngesterOptions
 {
-    // Service Bus
-    public string? ServiceBusConnectionString { get; set; }
-    public string? ServiceBusNamespace { get; set; }
-    public string? ServiceBusSendTopic { get; set; }
-    public string? ServiceBusSendQueue { get; set; }
-
-    // Consumer
-    public int ConsumerCount { get; set; } = 10;
-    public int BatchSize { get; set; } = 20;
-    public int PrefetchCount { get; set; }
+    // Health
+    public int Port { get; set; } = 8080;
 
     // Database
     public string DbHost { get; set; } = "";
@@ -24,33 +16,39 @@ public sealed class IngesterOptions
     public string? DbSchema { get; set; }
     public string DbSslMode { get; set; } = "require";
     public bool DbSimpleProtocol { get; set; }
-    public int DbMaxConns { get; set; } = 50;
+    public int DbMaxConnections { get; set; } = 50;
     public int DbConnectionIdleTimeMinutes { get; set; } = 5;
     public int DbConnectionLifeTimeMinutes { get; set; } = 30;
 
-    // Health
-    public int HealthPort { get; set; } = 8080;
-
-    public string SendDestination => ServiceBusSendTopic ?? ServiceBusSendQueue ?? "";
-    public bool HasSendDestination => !string.IsNullOrEmpty(SendDestination);
-
-    public string ConnectionString =>
+    public string DbConnectionString =>
         $"Host={DbHost};Port={DbPort};Database={DbDatabase};Username={DbUser};Password={DbPassword}" +
-        $";SSL Mode={DbSslMode};Maximum Pool Size={DbMaxConns}" +
+        $";SSL Mode={DbSslMode};Maximum Pool Size={DbMaxConnections}" +
         $";Connection Idle Lifetime={DbConnectionIdleTimeMinutes * 60}" +
         $";Connection Lifetime={DbConnectionLifeTimeMinutes * 60}" +
         (DbSchema is not null ? $";Search Path={DbSchema}" : "") +
         (DbSimpleProtocol ? ";No Reset On Close=true" : "");
 
-    private static string MapSslMode(string mode) => mode switch
-    {
-        "require" => "Require",
-        "disable" => "Disable",
-        "prefer" => "Prefer",
-        "verify-ca" => "VerifyCA",
-        "verify-full" => "VerifyFull",
-        _ => "Require"
-    };
+    // Azure Identity
+    public string Stage { get; set; } = "";
+    public string? AzureClientId { get; set; }
+
+    // Service Bus
+    public string? SbConnectionString { get; set; }
+    public string? SbNamespaceName { get; set; }
+    
+    // Consumer
+    public int SbConsumerCount { get; set; } = 10;
+    public int SbBatchSize { get; set; } = 20;
+    public int SbPrefetchCount { get; set; }
+    public string? SbUserUpdatedTopic { get; set; }
+    public string? SbUserUpdatedSubcription { get; set; }
+    public string? SbUserUpdatedStrategy { get; set; }
+    public string? SbMachineLocationTopic { get; set; }
+    public string? SbMachineLocationSubcription { get; set; }
+    public string? SbMachineLocationStrategy { get; set; }
+
+    public string? SbSendTopic { get; set; }
+
 
     public static IngesterOptions FromEnvironment()
     {
@@ -65,13 +63,7 @@ public sealed class IngesterOptions
 
         return new IngesterOptions
         {
-            ServiceBusConnectionString = Env("SERVICEBUS_CONNECTION_STRING") is { Length: > 0 } s ? s : null,
-            ServiceBusNamespace = Env("SERVICEBUS_NAMESPACE") is { Length: > 0 } ns ? ns : null,
-            ServiceBusSendTopic = Env("SB_SEND_TOPIC") is { Length: > 0 } st ? st : null,
-            ServiceBusSendQueue = Env("SB_SEND_QUEUE") is { Length: > 0 } sq ? sq : null,
-            ConsumerCount = EnvInt("SB_CONSUMER_COUNT", 10),
-            BatchSize = EnvInt("SB_BATCH_SIZE", 20),
-            PrefetchCount = EnvInt("SB_PREFETCH_COUNT", 0),
+            Port = EnvInt("PORT", 8080),
             DbHost = Env("DB_HOST"),
             DbUser = Env("DB_USER"),
             DbPassword = Env("DB_PASSWORD"),
@@ -79,11 +71,22 @@ public sealed class IngesterOptions
             DbDatabase = Env("DB_DATABASE"),
             DbSchema = Env("DB_SCHEMA") is { Length: > 0 } schema ? schema : null,
             DbSslMode = Env("DB_SSL_MODE", "Require"),
-            DbSimpleProtocol = EnvBool("DB_SIMPLE_PROTOCOL"),
-            DbMaxConns = EnvInt("DB_MAX_CONNS", 50),
+            DbMaxConnections = EnvInt("DB_MAX_CONNECTIONS", 50),
             DbConnectionIdleTimeMinutes = EnvInt("DB_CONNECTION_IDLE_TIME_MINUTES", 5),
             DbConnectionLifeTimeMinutes = EnvInt("DB_CONNECTION_LIFE_TIME_MINUTES", 30),
-            HealthPort = EnvInt("HEALTH_PORT", 8080),
+            Stage = Env("STAGE"),
+            AzureClientId = Env("AZURE_CLIENT_ID") is { Length: > 0 } cid ? cid : null,
+            SbConnectionString = Env("SB_CONNECTION_STRING") is { Length: > 0 } s ? s : null,
+            SbNamespaceName = Env("SB_NAMESPACE_NAME") is { Length: > 0 } ns ? ns : null,
+            SbConsumerCount = EnvInt("SB_CONSUMER_COUNT", 10),
+            SbBatchSize = EnvInt("SB_BATCH_SIZE", 20),
+            SbPrefetchCount = EnvInt("SB_PREFETCH_COUNT", 0),
+            SbUserUpdatedTopic = Env("SB_USER_UPDATED_TOPIC") is { Length: > 0 } s1 ? s1 : null,
+            SbUserUpdatedSubcription = Env("SB_USER_UPDATED_SUBSCRIPTION") is { Length: > 0 } s2 ? s2 : null,
+            SbUserUpdatedStrategy = Env("SB_USER_UPDATED_STRATEGY", "Single"),
+            SbMachineLocationTopic = Env("SB_MACHINE_LOCATION_TOPIC") is { Length: > 0 } s3 ? s3 : null,
+            SbMachineLocationSubcription = Env("SB_MACHINE_LOCATION_SUBSCRIPTION") is { Length: > 0 } s4 ? s4 : null,
+            SbMachineLocationStrategy = Env("SB_MACHINE_LOCATION_STRATEGY", "Single")
         };
     }
 }

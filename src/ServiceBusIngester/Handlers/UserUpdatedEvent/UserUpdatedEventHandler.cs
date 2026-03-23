@@ -1,11 +1,14 @@
+using System.Text.Json;
 using Azure.Messaging.ServiceBus;
 using ServiceBusIngester.Config;
 using ServiceBusIngester.Models;
+using ServiceBusIngester.Repositories;
 
 namespace ServiceBusIngester.Handlers.UserUpdatedEvent;
 
 public sealed class UserUpdatedEventHandler(
-    ILogger<UserUpdatedEventHandler> logger) : IEventHandler
+    ILogger<UserUpdatedEventHandler> logger,
+    UserAuditLogRepository auditLogRepository) : IEventHandler
 {
     public string EventType => "UserUpdatedEvent";
     public string Topic { get; } = Environment.GetEnvironmentVariable("SB_USER_UPDATED_TOPIC") ?? "";
@@ -13,10 +16,16 @@ public sealed class UserUpdatedEventHandler(
     public ProcessingStrategy Strategy { get; } = Enum.TryParse<ProcessingStrategy>(
         Environment.GetEnvironmentVariable("SB_USER_UPDATED_STRATEGY"), ignoreCase: true, out var s) ? s : ProcessingStrategy.Single;
 
-    public Task HandleSingleAsync(string messageId, CloudEvent cloudEvent, string rawBody, CancellationToken ct)
+    public async Task HandleSingleAsync(string messageId, CloudEvent cloudEvent, string rawBody, CancellationToken ct)
     {
         logger.LogInformation("User {UserId} updated", cloudEvent.Id);
-        return Task.CompletedTask;
+
+        await auditLogRepository.InsertAsync(
+            cloudEvent.Id,
+            cloudEvent.Type,
+            cloudEvent.Source,
+            JsonSerializer.Serialize(cloudEvent.Data),
+            ct);
     }
 
     public async Task HandleBatchAsync(
@@ -27,6 +36,14 @@ public sealed class UserUpdatedEventHandler(
         foreach (var (msg, cloudEvent) in items)
         {
             logger.LogInformation("User {UserId} updated", cloudEvent.Id);
+
+            await auditLogRepository.InsertAsync(
+                cloudEvent.Id,
+                cloudEvent.Type,
+                cloudEvent.Source,
+                JsonSerializer.Serialize(cloudEvent.Data),
+                ct);
+
             await receiver.CompleteMessageAsync(msg, ct);
         }
     }

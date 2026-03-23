@@ -25,9 +25,9 @@ public sealed class MessageConsumer(
 
             logger.LogInformation(
                 "Starting {ConsumerCount} receivers (batch size {BatchSize}, prefetch {PrefetchCount}, strategy {Strategy}) on {Topic}/{Subscription}",
-                options.ConsumerCount, options.BatchSize, options.PrefetchCount, strategy, topic, subscription);
+                options.SbConsumerCount, options.SbBatchSize, options.SbPrefetchCount, strategy, topic, subscription);
 
-            for (var i = 0; i < options.ConsumerCount; i++)
+            for (var i = 0; i < options.SbConsumerCount; i++)
             {
                 var receiverIndex = i;
                 tasks.Add(Task.Run(
@@ -42,7 +42,7 @@ public sealed class MessageConsumer(
     private async Task ReceiveLoop(
         int index, string topic, string subscription, ProcessingStrategy strategy, CancellationToken ct)
     {
-        var receiverOptions = new ServiceBusReceiverOptions { PrefetchCount = options.PrefetchCount };
+        var receiverOptions = new ServiceBusReceiverOptions { PrefetchCount = options.SbPrefetchCount };
         var receiver = client.CreateReceiver(topic, subscription, receiverOptions);
 
         logger.LogInformation("Receiver {Index} started on {Topic}/{Subscription}", index, topic, subscription);
@@ -54,7 +54,7 @@ public sealed class MessageConsumer(
                 IReadOnlyList<ServiceBusReceivedMessage> messages;
                 try
                 {
-                    messages = await receiver.ReceiveMessagesAsync(options.BatchSize, cancellationToken: ct);
+                    messages = await receiver.ReceiveMessagesAsync(options.SbBatchSize, cancellationToken: ct);
                 }
                 catch (OperationCanceledException) when (ct.IsCancellationRequested)
                 {

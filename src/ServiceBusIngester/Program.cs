@@ -11,23 +11,24 @@ using ServiceBusIngester.ServiceBus;
 var options = IngesterOptions.FromEnvironment();
 
 var builder = WebApplication.CreateSlimBuilder(args);
-builder.WebHost.UseUrls($"http://+:{options.HealthPort}");
+builder.WebHost.UseUrls($"http://+:{options.Port}");
 
 builder.Logging.AddJsonConsole();
 builder.Logging.AddFilter("Microsoft.AspNetCore", LogLevel.Warning);
 
 builder.Services.AddSingleton(options);
 
-var dataSource = NpgsqlDataSource.Create(options.ConnectionString);
+var dataSource = NpgsqlDataSource.Create(options.DbConnectionString);
 builder.Services.AddSingleton(dataSource);
 builder.Services.AddSingleton<MessageRepository>();
+builder.Services.AddSingleton<UserAuditLogRepository>();
 
 var sbClient = ServiceBusClientFactory.Create(options);
 builder.Services.AddSingleton(sbClient);
 
-if (options.HasSendDestination)
+if (options.SbSendTopic is not null)
 {
-    var sender = sbClient.CreateSender(options.SendDestination);
+    var sender = sbClient.CreateSender(options.SbSendTopic);
     builder.Services.AddSingleton(new MessageSender(sender));
 }
 else
@@ -41,7 +42,7 @@ builder.Services.AddSingleton<EventHandlerDispatcher>();
 builder.Services.AddHostedService<MessageConsumer>();
 
 builder.Services.AddHealthChecks()
-    .AddNpgSql(options.ConnectionString, name: "postgres");
+    .AddNpgSql(options.DbConnectionString, name: "postgres");
 
 builder.Services.AddOpenTelemetry()
     .ConfigureResource(r => r.AddService("servicebus-ingester-dotnet"))
